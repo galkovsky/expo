@@ -72,6 +72,16 @@ open class ExpoAppDelegate: UIResponder, UIApplicationDelegate {
 
   // TODO: - Responding to Environment Changes
 
+  @objc
+  open func applicationProtectedDataWillBecomeUnavailable(_ application: UIApplication) {
+    subscribers.forEach { $0.applicationProtectedDataWillBecomeUnavailable?(application) }
+  }
+
+  @objc
+  open func applicationProtectedDataDidBecomeAvailable(_ application: UIApplication) {
+    subscribers.forEach { $0.applicationProtectedDataDidBecomeAvailable?(application) }
+  }
+
   // TODO: - Managing App State Restoration
 
   // MARK: - Downloading Data in the Background
