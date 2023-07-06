@@ -84,12 +84,19 @@ public final class UpdatesUtils: NSObject {
             sendStateEvent(UpdatesStateEventCheckComplete())
             return
           case is RollBackToEmbeddedUpdateDirective:
-            let body = [
-              "isRollBackToEmbedded": true
-            ]
-            block(body)
-            sendStateEvent(UpdatesStateEventCheckCompleteWithRollback())
-            return
+            let rollbackIsValid = (updateDirective as? RollBackToEmbeddedUpdateDirective)?.isValid() ?? false
+            if rollbackIsValid {
+              let body = [
+                "isRollBackToEmbedded": true
+              ]
+              block(body)
+              sendStateEvent(UpdatesStateEventCheckCompleteWithRollback())
+              return
+            } else {
+              block([:])
+              sendStateEvent(UpdatesStateEventCheckComplete())
+              return
+            }
           default:
             return handleCheckError(UpdatesUnsupportedDirectiveException(), block: block)
           }
@@ -146,7 +153,7 @@ public final class UpdatesUtils: NSObject {
           case is NoUpdateAvailableUpdateDirective:
             return false
           case is RollBackToEmbeddedUpdateDirective:
-            return true
+            return (updateDirective as? RollBackToEmbeddedUpdateDirective)?.isValid() ?? false
           default:
             NSException(name: .internalInconsistencyException, reason: "Unhandled update directive type").raise()
             return false
@@ -179,13 +186,20 @@ public final class UpdatesUtils: NSObject {
         )
       } success: { updateResponse in
         if updateResponse?.directiveUpdateResponsePart?.updateDirective is RollBackToEmbeddedUpdateDirective {
-          let body = [
-            "isNew": false,
-            "isRollBackToEmbedded": true
-          ]
-          block(body)
-          sendStateEvent(UpdatesStateEventDownloadCompleteWithRollback())
-          return
+          let rollbackIsValid = (updateResponse?.directiveUpdateResponsePart?.updateDirective as? RollBackToEmbeddedUpdateDirective)?.isValid() ?? false
+          if rollbackIsValid {
+            let body = [
+              "isNew": false,
+              "isRollBackToEmbedded": true
+            ]
+            block(body)
+            sendStateEvent(UpdatesStateEventDownloadCompleteWithRollback())
+            return
+          } else {
+            block([:])
+            sendStateEvent(UpdatesStateEventCheckComplete())
+            return
+          }
         } else {
           if let update = updateResponse?.manifestUpdateResponsePart?.updateManifest {
             AppController.sharedInstance.resetSelectionPolicyToDefault()

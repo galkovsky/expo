@@ -2,6 +2,7 @@
 
 // swiftlint:disable closure_body_length
 // swiftlint:disable superfluous_else
+// swiftlint:disable cyclomatic_complexity
 
 // this class uses a ton of implicit non-null properties based on method call order. not worth changing to appease lint
 // swiftlint:disable force_unwrapping
@@ -357,20 +358,33 @@ public final class AppLoaderTask: NSObject {
           }
           return false
         case is RollBackToEmbeddedUpdateDirective:
-          self.isUpToDate = false
-
-          if let swiftDelegate = self.swiftDelegate {
-            self.delegateQueue.async {
-              swiftDelegate.appLoaderTask(self, didFinishCheckingForRemoteUpdateWithRemoteCheckResult: RemoteCheckResult.rollBackToEmbedded)
+          let rollbackIsValid = (updateDirective as? RollBackToEmbeddedUpdateDirective)?.isValid() ?? false
+          if rollbackIsValid {
+            // Rollback is valid
+            self.isUpToDate = false
+            if let swiftDelegate = self.swiftDelegate {
+              self.delegateQueue.async {
+                swiftDelegate.appLoaderTask(self, didFinishCheckingForRemoteUpdateWithRemoteCheckResult: RemoteCheckResult.rollBackToEmbedded)
+              }
             }
+
+            if let delegate = self.delegate {
+              self.delegateQueue.async {
+                delegate.appLoaderTask(self, didStartLoadingUpdate: nil)
+              }
+            }
+            return true
+          } else {
+            // Rollback is invalid
+            self.isUpToDate = true
+            if let swiftDelegate = self.swiftDelegate {
+              self.delegateQueue.async {
+                swiftDelegate.appLoaderTask(self, didFinishCheckingForRemoteUpdateWithRemoteCheckResult: RemoteCheckResult.noUpdateAvailable)
+              }
+            }
+            return false
           }
 
-          if let delegate = self.delegate {
-            self.delegateQueue.async {
-              delegate.appLoaderTask(self, didStartLoadingUpdate: nil)
-            }
-          }
-          return true
         default:
           NSException(name: .internalInconsistencyException, reason: "Unhandled update directive type").raise()
           return false
@@ -570,3 +584,4 @@ public final class AppLoaderTask: NSObject {
 // swiftlint:enable closure_body_length
 // swiftlint:enable force_unwrapping
 // swiftlint:enable superfluous_else
+// swiftlint:enable cyclomatic_complexity

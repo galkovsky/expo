@@ -63,6 +63,14 @@ public final class RollBackToEmbeddedUpdateDirective: UpdateDirective {
     self.commitTime = commitTime
     super.init(signingInfo: signingInfo)
   }
+
+  /**
+   True if the commit time for the rollback is later than the commit time for the launched bundle
+   */
+  func isValid() -> Bool {
+    let commitTimeRunning = AppController.sharedInstance.launchedUpdate()?.commitTime ?? Date(timeIntervalSince1970: 0)
+    return commitTime.compare(commitTimeRunning) == ComparisonResult.orderedDescending
+  }
 }
 
 internal class UpdateResponsePart {}
